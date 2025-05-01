@@ -1,19 +1,22 @@
 from flask import Flask, request, jsonify
+import requests
 
 app = Flask(__name__)
 
-@app.route("/chat", methods=["POST"])
-def chat():
-    user_input = request.json.get("message", "")
-    
-    if "hi" in user_input.lower():
-        reply = "Hello! How can I assist you today?"
-    elif "your name" in user_input.lower():
-        reply = "I am Jarvis, your AI assistant."
-    else:
-        reply = "I'm still learning, but I'll do my best!"
-    
-    return jsonify({"reply": reply})
+API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
+HF_TOKEN = "Bearer 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"
 
-if __name__ == "__main__":
-    app.run()
+headers = {"Authorization": HF_TOKEN}
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    data = request.get_json()
+    prompt = data.get("prompt", "")
+    response = requests.post(API_URL, headers=headers, json={
+        "inputs": prompt
+    })
+    return jsonify(response.json())
+
+@app.route('/')
+def home():
+    return "JARVIS API is working!"
