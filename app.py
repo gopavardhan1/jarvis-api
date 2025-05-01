@@ -1,42 +1,49 @@
 from flask import Flask, request, jsonify
 import requests
+import os
 
 app = Flask(__name__)
 
-# Replace this with your actual Hugging Face token
-HUGGINGFACE_API_KEY = "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"
+# Hugging Face API details
+HF_API_TOKEN = os.getenv("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")
+HF_API_URL = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
+
+headers = {
+    "Authorization": f"Bearer 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",
+    "Content-Type": "application/json"
+}
 
 @app.route('/')
 def home():
-    return "Jarvis AI API is Live!"
+    return "Jarvis API is running!"
 
 @app.route('/ask', methods=['POST'])
 def ask():
     data = request.get_json()
-    question = data.get("question", "")
+    question = data.get('question')
 
     if not question:
         return jsonify({"reply": "No question received."})
-
-    headers = {
-        "Authorization": f"Bearer {HUGGINGFACE_API_KEY}"
-    }
 
     payload = {
         "inputs": question
     }
 
-    response = requests.post(
-        "https://api-inference.huggingface.co/models/google/flan-t5-small",
-        headers=headers,
-        json=payload
-    )
+    response = requests.post(HF_API_URL, headers=headers, json=payload)
 
     if response.status_code == 200:
-        generated_text = response.json()[0].get("generated_text", "No response")
-        return jsonify({"reply": generated_text})
+        output = response.json()
+        if isinstance(output, list) and 'generated_text' in output[0]:
+            reply = output[0]['generated_text']
+        elif isinstance(output, dict) and 'generated_text' in output:
+            reply = output['generated_text']
+        else:
+            reply = "I couldn't understand the response."
     else:
-        return jsonify({"reply": "Error connecting to Hugging Face"}), 500
+        reply = f"Error: {response.status_code}"
+
+    return jsonify({"reply": reply})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
